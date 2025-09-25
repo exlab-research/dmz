@@ -188,6 +188,11 @@ class GaussianDiffusion(gaussian_diffusion.GaussianDiffusion):
         final = None
         if return_intermediate:
             intermediate_samples = list()
+            if noise is None:
+                if device is None:
+                    device = next(model.parameters()).device
+                    noise = torch.randn(shape).to(device)
+            intermediate_samples.append(noise.clone().unsqueeze(0).detach().cpu())
         else:
             intermediate_samples = None
         for sample in self.p_sample_loop_progressive(
@@ -207,7 +212,7 @@ class GaussianDiffusion(gaussian_diffusion.GaussianDiffusion):
             if return_intermediate:
                 intermediate_samples.append(sample["sample"].clone().unsqueeze(0).detach().cpu())
         if return_intermediate:
-            intermediate_samples = torch.cat(intermediate_samples[:9] + intermediate_samples[9::10], dim=0)
+            intermediate_samples = torch.cat(intermediate_samples[:10] + intermediate_samples[10::10], dim=0)
             return intermediate_samples
         return final["sample"]
 

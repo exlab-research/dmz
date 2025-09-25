@@ -235,6 +235,7 @@ def sample_and_save_intermediate(
     if num_images % batch_size != 0:
         num_batches += 1
     all_images = []
+    all_zs = []
     with torch.no_grad():
         for batch in tqdm(data, total=num_batches):
             img, cond = batch
@@ -247,6 +248,7 @@ def sample_and_save_intermediate(
                 clip_denoised=clip_denoised,
                 return_intermediate=True,
             )
+            all_zs.extend([z.cpu().numpy()])
             sample = ((sample + 1) * 127.5).clamp(0, 255).to(torch.uint8)
             sample = sample.permute(0, 1, 3, 4, 2)
             sample = sample.contiguous()
@@ -265,7 +267,13 @@ def sample_and_save_intermediate(
         logger.log(f"saving to {out_path}")
         np.savez(out_path, arr)
 
-        ts = list(range(9)) + list(range(0, 100))[9::10]
+        zs = np.concatenate(all_zs, axis=0)
+        zs = zs[:num_images]
+        shape_str = "x".join([str(x) for x in zs.shape])
+        out_path = os.path.join(logger.get_dir(), f"intermediate_z_{prefix}_T{T}_{shape_str}.npz")
+        np.savez(out_path, zs)
+        
+        ts = list(range(10)) + list(range(0, 101))[10::10]
         for i in range(arr.shape[0]):
             arr_i = arr[i]
             arr_i = torch.from_numpy(arr_i[:64]).permute(0, 3, 1, 2).float() / 255.0
